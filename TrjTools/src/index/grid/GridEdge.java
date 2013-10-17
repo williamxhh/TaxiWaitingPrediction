@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import roadNetwork.DistanceType;
 import roadNetwork.Edge;
 import roadNetwork.GeoPoint;
 import roadNetwork.MBR;
@@ -130,7 +131,8 @@ public class GridEdge {
                 int count = edges.size();
                 for (int j = 0; j < count; j++)
                 {
-                    if (edges.get(j).dist2From(p) <= radius2)
+                	DistanceType dt = edges.get(j).dist2From(p);
+                    if (dt.distance <= radius2)
                     {
                         result.add(edges.get(j));
                     }

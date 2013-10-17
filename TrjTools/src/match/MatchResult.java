@@ -1,19 +1,20 @@
 package match;
 
+import roadNetwork.Edge;
 import roadNetwork.GeoPoint;
 
 public class MatchResult implements Comparable<MatchResult>{
-	private long roadId;
+	private Edge edge;
 	private double probability;
 	private long segId;
 	private GeoPoint segStartPoint;
 	private GeoPoint segEndPoint;
 	
-	public long getRoadId() {
-		return roadId;
+	public Edge getEdge() {
+		return edge;
 	}
-	public void setRoadId(long roadId) {
-		this.roadId = roadId;
+	public void setEdge(Edge edge) {
+		this.edge = edge;
 	}
 	public double getProbability() {
 		return probability;
@@ -49,13 +50,15 @@ public class MatchResult implements Comparable<MatchResult>{
 		return 0;
 	}
 	
-	public MatchResult(long roadId,double probability){
-		this.roadId = roadId;
-		this.probability = probability;
+	public MatchResult(Edge edge,long segId,GeoPoint segStartPoint,GeoPoint segEndPoint){
+		this.edge = edge;
+		this.segId = segId;
+		this.segStartPoint = segStartPoint;
+		this.segEndPoint = segEndPoint;
 	}
 	@Override
 	public String toString() {
-		return "<roadid:"+this.roadId+";probability:"+this.probability+">";
+		return "<EdgeId:"+this.edge.getId()+";  SegId:"+this.segId+";  probability:"+this.probability+">  "+this.segStartPoint+"-->"+this.segEndPoint+"\r\n";
 	}
 	
 	

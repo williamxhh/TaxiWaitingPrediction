@@ -76,6 +76,18 @@ public class Edge {
 	private double getLength() {
 		return getGeo().getLength();
 	}
+	
+	public int getPointsCount(){
+		return getGeo().getPointsCount();
+	}
+	
+	public GeoPoint getSegStart(int segId){
+		return getGeo().getSegStartPoint(segId);
+	}
+	
+	public GeoPoint getSegEnd(int segId){
+		return getGeo().getSegEndPoint(segId);
+	}
 
 	public Edge(long id, Vertex start, Vertex end) {
 		this.id = id;
@@ -95,18 +107,9 @@ public class Edge {
         return getGeo().projectFrom(p);
     }
 	
-	public double dist2From(GeoPoint p)
+	public DistanceType dist2From(GeoPoint p)
     {
         return getGeo().dist2From(p);
-    }
-
-	public double dist2From(GeoPoint p, DistanceType dt)
-    {
-        return getGeo().dist2From(p);
-    }
-	public double distFrom(GeoPoint p)
-    {
-        return Math.sqrt(dist2From(p));
     }
 
 	@Override

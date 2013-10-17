@@ -36,7 +36,7 @@ public class GeoPoint {
 
 	@Override
 	public String toString() {
-		return "("+lng+","+lat+")";
+		return "("+getLng()+","+getLat()+")";
 	}
 	
 	public static double getDistance2(GeoPoint p1, GeoPoint p2)

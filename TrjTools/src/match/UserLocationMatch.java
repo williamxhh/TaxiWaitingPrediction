@@ -58,14 +58,17 @@ public class UserLocationMatch {
 		List<MatchResult> result = new ArrayList<MatchResult>();
 		
 		//以下两行代码是用来修正用户的GPS数据与路网数据的偏移量
-//		user.setLng(user.getLng()+Double.parseDouble(sysConfigProps.getProperty("longituteDelta")));
-//		user.setLat(user.getLat()+Double.parseDouble(sysConfigProps.getProperty("latituteDelta")));
+		user.setLng(user.getLng()+Double.parseDouble(sysConfigProps.getProperty("longituteDelta")));
+		user.setLat(user.getLat()+Double.parseDouble(sysConfigProps.getProperty("latituteDelta")));
+		System.out.println(user.getLng());
+		System.out.println(user.getLat());
 		
-		HashSet<Edge> candidateEdges = getCandidateEdges(user,RADIUS);
-		for(Edge e :candidateEdges)
+		HashSet<MatchResult> candidateEdges = getCandidateEdges(user,RADIUS);
+		for(MatchResult r :candidateEdges)
         {
-            double prob = getEmissionProbility(e, user);
-            result.add(new MatchResult(e.getId(),prob));
+            double prob = getEmissionProbility(r.getEdge(), user);
+            r.setProbability(prob);
+            result.add(r);
         }
 		return result;
 	}
@@ -73,17 +76,16 @@ public class UserLocationMatch {
 	private static double getEmissionProbility(Edge e, GeoPoint point)
     {
         double prob = Double.NEGATIVE_INFINITY;
-        DistanceType dt = new DistanceType();
-        double distance2 = e.dist2From(point, dt);
+        DistanceType dt = e.dist2From(point);
 
         if (Math.abs(dt.type) < 1)
         {
             //penalty
             if (dt.type != 0)
             {
-                distance2 *= 1.44;
+                dt.distance *= 1.44;
             }
-            prob = -0.5 * distance2 * sSigma;
+            prob = -0.5 * dt.distance * sSigma;
         }
         else
         {
@@ -92,17 +94,24 @@ public class UserLocationMatch {
         return prob;
     }
 
-	private static HashSet<Edge> getCandidateEdges(GeoPoint p, double radius)
+	private static HashSet<MatchResult> getCandidateEdges(GeoPoint p, double radius)
     {
         double maxRadius = MAX_RADIUS;
         HashSet<Edge> cands = graph.rangeQuery(p, radius, maxRadius);
-        HashSet<Edge> result = new HashSet<Edge>(cands);
+        HashSet<MatchResult> result = new HashSet<MatchResult>();
         for(Edge e : cands)
         {
         	DistanceType dt = e.projectFrom(p);
-            if (dt.type != 0)
+            if (dt.type == 0)
             {
-                result.remove(e);
+            	//如果edge是一条直线，不是一条折线，那么它的起点终点直接就是起终点
+            	if(e.getPointsCount()<=2){
+            		result.add(new MatchResult(e, dt.segid, e.getStart().toPoint(), e.getEnd().toPoint()));
+            	}
+            	//如果edge是一条折线，那么就根据片段号取到相应路段的起终点
+            	else{
+            		result.add(new MatchResult(e,dt.segid,e.getSegStart(dt.segid),e.getSegEnd(dt.segid)));
+            	}
             }
         }
         return result;

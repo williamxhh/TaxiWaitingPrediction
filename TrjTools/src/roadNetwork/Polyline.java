@@ -23,6 +23,18 @@ public class Polyline {
         return mbr;
     }
 	
+	public int getPointsCount(){
+		return this.points.size();
+	}
+	
+	public GeoPoint getSegStartPoint(int segId){
+		return this.points.get(segId);
+	}
+	
+	public GeoPoint getSegEndPoint(int segId){
+		return this.points.get(segId+1);
+	}
+	
 	public double getLength(){
 		return getLength(false);
 	}
@@ -118,9 +130,10 @@ public class Polyline {
         return dt;
     }
 	
-	public double dist2From(GeoPoint p)
+	public DistanceType dist2From(GeoPoint p)
     {
 		DistanceType dt =  projectFrom(p);
-        return GeoPoint.getDistance2(dt.projection, p);
+		dt.distance = GeoPoint.getDistance2(dt.projection, p);
+        return dt;
     }
 }
