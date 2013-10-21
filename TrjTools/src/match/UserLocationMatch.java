@@ -41,9 +41,8 @@ public class UserLocationMatch {
 	}
 	
 	private static void loadProperties(){
-		String propsPath = UserLocationMatch.class.getClass().getResource("/").getPath();
 		try {
-			BufferedReader propsReader = new BufferedReader(new FileReader(new File(propsPath+PROPS_FILENAME)));
+			BufferedReader propsReader = new BufferedReader(new InputStreamReader(UserLocationMatch.class.getClass().getResourceAsStream("/"+PROPS_FILENAME)));
 			sysConfigProps.load(propsReader);
 		} catch (FileNotFoundException e) {
 			LOG.error("System properties config file not found");
@@ -301,7 +300,8 @@ public class UserLocationMatch {
 		Graph g = new Graph(verticesFile, edgesFile, geosFile);
 		
 		try {
-			BufferedReader reader = new BufferedReader(new FileReader(sysConfigProps.getProperty("testSourceFile")));
+//			BufferedReader reader = new BufferedReader(new FileReader(sysConfigProps.getProperty("testSourceFile")));
+			BufferedReader reader = new BufferedReader(new InputStreamReader(UserLocationMatch.class.getClass().getResourceAsStream(sysConfigProps.getProperty("testSourceFile"))));
 			String line = reader.readLine();//首行是标题，不是实际数据，没有用，此处直接读掉
 			while((line=reader.readLine())!=null){
 				String location = line.split("\t")[0];
@@ -312,7 +312,7 @@ public class UserLocationMatch {
 			}
 			reader.close();
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			e.printStackTrace();	
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

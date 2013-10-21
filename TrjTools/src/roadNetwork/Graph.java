@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -60,7 +61,8 @@ public class Graph {
 		this.mbr = MBR.EMPTY;
 		vertices = new HashMap<Long, Vertex>();
 		try {
-			BufferedReader reader = new BufferedReader(new FileReader(fileName));
+//			BufferedReader reader = new BufferedReader(new FileReader(fileName));
+			BufferedReader reader = new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream(fileName)));
 			String line;
 			while ((line = reader.readLine()) != null) {
 				String[] fields = line.split("\t");
@@ -87,7 +89,8 @@ public class Graph {
     {
         edges = new HashMap<Long, Edge>();
         try {
-			BufferedReader reader = new BufferedReader(new FileReader(fileName));
+//			BufferedReader reader = new BufferedReader(new FileReader(fileName));
+        	BufferedReader reader = new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream(fileName)));
 			String line;
 			while ((line = reader.readLine()) != null) {
 				String[] fields = line.split("\t");
@@ -114,7 +117,8 @@ public class Graph {
 	private void loadGeometry(String fileName)
     {
 		try {
-			BufferedReader reader = new BufferedReader(new FileReader(fileName));
+//			BufferedReader reader = new BufferedReader(new FileReader(fileName));
+			BufferedReader reader = new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream(fileName)));
 			String line;
 			while ((line = reader.readLine()) != null) {
 				String[] fields = line.split("\t",2);
