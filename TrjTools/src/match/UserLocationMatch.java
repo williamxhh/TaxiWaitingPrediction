@@ -31,9 +31,9 @@ public class UserLocationMatch {
 		graph = loadData();
 		List<List<MatchResult>> result = new ArrayList<List<MatchResult>>();
 		for(GeoPoint user:users){
-//			long startTimestamp= System.currentTimeMillis();
+			long startTimestamp= System.currentTimeMillis();
 			List<MatchResult> roads = userMatch(user);
-//			System.out.println((System.currentTimeMillis()-startTimestamp)/1000.0+"s");
+			System.out.println((System.currentTimeMillis()-startTimestamp)/1000.0+"s");
 			Collections.sort(roads,Collections.reverseOrder());
 			result.add(roads);
 		}
@@ -55,7 +55,7 @@ public class UserLocationMatch {
 	}
 	
 	private static List<MatchResult> userMatch(GeoPoint user){
-		List<MatchResult> result = new ArrayList<MatchResult>();
+//		List<MatchResult> result = new ArrayList<MatchResult>();
 		
 		if(sysConfigProps.getProperty("fixDelta").equals("true")){
 		//以下两行代码是用来修正用户的GPS数据与路网数据的偏移量
@@ -64,37 +64,37 @@ public class UserLocationMatch {
 			System.out.println(user.getLng());
 			System.out.println(user.getLat());
 		}
-		
 		HashSet<MatchResult> candidateEdges = getCandidateEdges(user,RADIUS);
-		for(MatchResult r :candidateEdges)
-        {
-            double prob = getEmissionProbility(r.getEdge(), user);
-            r.setProbability(prob);
-            result.add(r);
-        }
+//		for(MatchResult r :candidateEdges)
+//        {
+//            double prob = getEmissionProbility(r.getEdge(), user);
+//            r.setProbability(prob);
+//            result.add(r);
+//        }
+		List<MatchResult> result = new ArrayList<MatchResult>(candidateEdges);
 		return result;
 	}
 	
-	private static double getEmissionProbility(Edge e, GeoPoint point)
-    {
-        double prob = Double.NEGATIVE_INFINITY;
-        DistanceType dt = e.dist2From(point);
-
-        if (Math.abs(dt.type) < 1)
-        {
-            //penalty
-            if (dt.type != 0)
-            {
-                dt.distance *= 1.44;
-            }
-            prob = -0.5 * dt.distance * sSigma;
-        }
-        else
-        {
-            prob = Double.NEGATIVE_INFINITY;
-        }
-        return prob;
-    }
+//	private static double getEmissionProbility(Edge e, GeoPoint point)
+//    {
+//        double prob = Double.NEGATIVE_INFINITY;
+//        DistanceType dt = e.dist2From(point);
+//
+//        if (Math.abs(dt.type) < 1)
+//        {
+//            //penalty
+//            if (dt.type != 0)
+//            {
+//                dt.distance *= 1.44;
+//            }
+//            prob = -0.5 * dt.distance * sSigma;
+//        }
+//        else
+//        {
+//            prob = Double.NEGATIVE_INFINITY;
+//        }
+//        return prob;
+//    }
 
 	private static HashSet<MatchResult> getCandidateEdges(GeoPoint user, double radius)
     {
@@ -119,9 +119,9 @@ public class UserLocationMatch {
             		end = e.getSegEnd(dt.segid);
             	}
             	if(determineDirection(start, end, user)){
-        			result.add(new MatchResult(e, dt.segid, start, end));
+        			result.add(new MatchResult(e, dt.segid, dt.distance,start, end));
         		}else{
-        			result.add(new MatchResult(e, dt.segid, end, start));
+        			result.add(new MatchResult(e, dt.segid, dt.distance,end, start));
         		}
             }
         }

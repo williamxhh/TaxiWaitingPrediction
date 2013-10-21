@@ -85,6 +85,7 @@ public class Polyline {
                 }
             }
         }
+        dt.distance = minDist;
         return dt;
     }
 	
@@ -133,7 +134,7 @@ public class Polyline {
 	public DistanceType dist2From(GeoPoint p)
     {
 		DistanceType dt =  projectFrom(p);
-		dt.distance = GeoPoint.getDistance2(dt.projection, p);
+//		dt.distance = GeoPoint.getDistance2(dt.projection, p);
         return dt;
     }
 }

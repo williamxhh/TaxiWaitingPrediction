@@ -61,7 +61,6 @@ public class GridEdge {
     }
 	private void buildIndex(Collection<Edge> edges)
     {
-        //insert edges into the grid
         for(Edge e :edges)
         {
             List<Integer> ids = getCells(e);
