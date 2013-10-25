@@ -24,20 +24,34 @@ public class UserLocationMatch {
     private static Graph graph = null;
 	private static List<GeoPoint> users = new ArrayList<GeoPoint>();
 	
-	static Properties sysConfigProps = new Properties();
+	public static Properties sysConfigProps = new Properties();
 	
 	public static void main(String[] args) {
 		loadProperties();
 		graph = loadData();
 		List<List<MatchResult>> result = new ArrayList<List<MatchResult>>();
 		for(GeoPoint user:users){
-			long startTimestamp= System.currentTimeMillis();
 			List<MatchResult> roads = userMatch(user);
-			System.out.println((System.currentTimeMillis()-startTimestamp)/1000.0+"s");
 			Collections.sort(roads,Collections.reverseOrder());
 			result.add(roads);
 		}
 		System.out.println(result.get(0));
+	}
+	
+	/**
+	 * 这个match方法做的事情和main一样，写在这里为了供prediction调用
+	 * @return
+	 */
+	public static  List<List<MatchResult>> match(){
+		loadProperties();
+		graph = loadData();
+		List<List<MatchResult>> result = new ArrayList<List<MatchResult>>();
+		for(GeoPoint user:users){
+			List<MatchResult> roads = userMatch(user);
+			Collections.sort(roads,Collections.reverseOrder());
+			result.add(roads);
+		}
+		return result;
 	}
 	
 	private static void loadProperties(){
