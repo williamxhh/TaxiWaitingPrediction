@@ -31,9 +31,7 @@ public class UserLocationMatch {
 		graph = loadData();
 		List<List<MatchResult>> result = new ArrayList<List<MatchResult>>();
 		for(GeoPoint user:users){
-			long startTimestamp= System.currentTimeMillis();
 			List<MatchResult> roads = userMatch(user);
-			System.out.println((System.currentTimeMillis()-startTimestamp)/1000.0+"s");
 			Collections.sort(roads,Collections.reverseOrder());
 			result.add(roads);
 		}
@@ -119,8 +117,6 @@ public class UserLocationMatch {
             	}
             	if(determineDirection(start, end, user)){
         			result.add(new MatchResult(e, dt.segid, dt.distance,start, end));
-        		}else{
-        			result.add(new MatchResult(e, dt.segid, dt.distance,end, start));
         		}
             }
         }
