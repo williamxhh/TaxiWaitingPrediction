@@ -133,8 +133,6 @@ public class UserLocationMatch {
             	}
             	if(determineDirection(start, end, user)){
         			result.add(new MatchResult(e, dt.segid, dt.distance,start, end));
-        		}else{
-        			result.add(new MatchResult(e, dt.segid, dt.distance,end, start));
         		}
             }
         }
