@@ -8,8 +8,6 @@ public class MatchResult implements Comparable<MatchResult>{
 //	private double probability;
 	private double distance;
 	private long segId;
-	private GeoPoint segStartPoint;
-	private GeoPoint segEndPoint;
 	
 	public Edge getEdge() {
 		return edge;
@@ -35,18 +33,6 @@ public class MatchResult implements Comparable<MatchResult>{
 	public void setSegId(long segId) {
 		this.segId = segId;
 	}
-	public GeoPoint getSegStartPoint() {
-		return segStartPoint;
-	}
-	public void setSegStartPoint(GeoPoint segStartPoint) {
-		this.segStartPoint = segStartPoint;
-	}
-	public GeoPoint getSegEndPoint() {
-		return segEndPoint;
-	}
-	public void setSegEndPoint(GeoPoint segEndPoint) {
-		this.segEndPoint = segEndPoint;
-	}
 	@Override
 	public int compareTo(MatchResult o) {
 //		if(this.probability>o.getProbability()){
@@ -62,17 +48,14 @@ public class MatchResult implements Comparable<MatchResult>{
 		return 0;
 	}
 	
-	public MatchResult(Edge edge,long segId,double distance,GeoPoint segStartPoint,GeoPoint segEndPoint){
+	public MatchResult(Edge edge,long segId,double distance){
 		this.edge = edge;
 		this.segId = segId;
 		this.distance = distance;
-		this.segStartPoint = segStartPoint;
-		this.segEndPoint = segEndPoint;
 	}
 	@Override
 	public String toString() {
-//		return "<EdgeId:"+this.edge.getId()+";  SegId:"+this.segId+";  probability:"+this.probability+";  distance:"+this.distance+">  "+this.segStartPoint+"-->"+this.segEndPoint+"\r\n";
-		return "<EdgeId:"+this.edge.getId()+";  SegId:"+this.segId+";  distance:"+this.distance+">  "+this.segStartPoint+"-->"+this.segEndPoint+"\r\n";
+		return this.edge.getId()+","+this.segId+"#";
 	}
 	
 	
