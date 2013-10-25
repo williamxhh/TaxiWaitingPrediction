@@ -68,8 +68,6 @@ public class UserLocationMatch {
 	}
 	
 	private static List<MatchResult> userMatch(GeoPoint user){
-//		List<MatchResult> result = new ArrayList<MatchResult>();
-		
 		if(sysConfigProps.getProperty("fixDelta").equals("true")){
 		//以下两行代码是用来修正用户的GPS数据与路网数据的偏移量
 			user.setLng(user.getLng()+Double.parseDouble(sysConfigProps.getProperty("longituteDelta")));
@@ -78,37 +76,10 @@ public class UserLocationMatch {
 			System.out.println(user.getLat());
 		}
 		HashSet<MatchResult> candidateEdges = getCandidateEdges(user,RADIUS);
-//		for(MatchResult r :candidateEdges)
-//        {
-//            double prob = getEmissionProbility(r.getEdge(), user);
-//            r.setProbability(prob);
-//            result.add(r);
-//        }
 		List<MatchResult> result = new ArrayList<MatchResult>(candidateEdges);
 		return result;
 	}
 	
-//	private static double getEmissionProbility(Edge e, GeoPoint point)
-//    {
-//        double prob = Double.NEGATIVE_INFINITY;
-//        DistanceType dt = e.dist2From(point);
-//
-//        if (Math.abs(dt.type) < 1)
-//        {
-//            //penalty
-//            if (dt.type != 0)
-//            {
-//                dt.distance *= 1.44;
-//            }
-//            prob = -0.5 * dt.distance * sSigma;
-//        }
-//        else
-//        {
-//            prob = Double.NEGATIVE_INFINITY;
-//        }
-//        return prob;
-//    }
-
 	private static HashSet<MatchResult> getCandidateEdges(GeoPoint user, double radius)
     {
         double maxRadius = MAX_RADIUS;
@@ -132,7 +103,7 @@ public class UserLocationMatch {
             		end = e.getSegEnd(dt.segid);
             	}
             	if(determineDirection(start, end, user)){
-        			result.add(new MatchResult(e, dt.segid, dt.distance,start, end));
+        			result.add(new MatchResult(e, dt.segid, dt.distance));
         		}
             }
         }
