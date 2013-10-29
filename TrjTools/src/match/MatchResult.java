@@ -1,11 +1,9 @@
 package match;
 
 import roadNetwork.Edge;
-import roadNetwork.GeoPoint;
 
 public class MatchResult implements Comparable<MatchResult>{
 	private Edge edge;
-//	private double probability;
 	private double distance;
 	private long segId;
 	
@@ -15,12 +13,6 @@ public class MatchResult implements Comparable<MatchResult>{
 	public void setEdge(Edge edge) {
 		this.edge = edge;
 	}
-//	public double getProbability() {
-//		return probability;
-//	}
-//	public void setProbability(double probability) {
-//		this.probability = probability;
-//	}
 	public double getDistance() {
 		return distance;
 	}
@@ -35,11 +27,6 @@ public class MatchResult implements Comparable<MatchResult>{
 	}
 	@Override
 	public int compareTo(MatchResult o) {
-//		if(this.probability>o.getProbability()){
-//			return 1;
-//		}else if(this.probability<o.getProbability()){
-//			return -1;
-//		}
 		if(this.distance<o.getDistance()){
 			return 1;
 		}else if(this.distance>o.getDistance()){

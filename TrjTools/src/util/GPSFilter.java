@@ -48,7 +48,6 @@ public class GPSFilter {
 
 					if (Math.abs(lon - center_lon) <= maxRange
 							&& Math.abs(lat - center_lat) <= maxRange) {
-//						pw.write(lon + "," + lat + "\r\n");
 						double newlon = lon+lon_fix;
 						double newlat = lat+lat_fix;
 						pwf.write(newlon+ "," + newlat + "\r\n");
@@ -57,7 +56,6 @@ public class GPSFilter {
 			}
 			fr.close();
 		}
-//		pw.close();
 		pwf.close();
 		System.out.println("Done");
 	}
