@@ -9,6 +9,7 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
+import prediction.WaitingPrediction;
 import roadNetwork.DistanceType;
 import roadNetwork.Edge;
 import roadNetwork.GeoPoint;
@@ -35,7 +36,9 @@ public class UserLocationMatch {
 			Collections.sort(roads,Collections.reverseOrder());
 			result.add(roads);
 		}
-		System.out.println(result.get(0));
+		for(List<MatchResult> r:result){
+			System.out.println(r);
+		}
 	}
 	
 	/**
@@ -276,6 +279,15 @@ public class UserLocationMatch {
 		return false;
 	}
 	
+	private static String getTestSourceFile(){
+		String file = WaitingPrediction.getTestSourceFile();
+		if(file.equals("")){
+			WaitingPrediction.loadProperties();
+			file = WaitingPrediction.getTestSourceFile();
+		}
+		return file;
+	}
+	
 	private static Graph loadData(){
 		String edgesFile = sysConfigProps.getProperty("edgesFile");
 		String verticesFile = sysConfigProps.getProperty("verticesFile");
@@ -283,8 +295,8 @@ public class UserLocationMatch {
 		Graph g = new Graph(verticesFile, edgesFile, geosFile);
 		
 		try {
-//			BufferedReader reader = new BufferedReader(new FileReader(sysConfigProps.getProperty("testSourceFile")));
-			BufferedReader reader = new BufferedReader(new InputStreamReader(UserLocationMatch.class.getClass().getResourceAsStream(sysConfigProps.getProperty("testSourceFile"))));
+			BufferedReader reader = new BufferedReader(new FileReader(getTestSourceFile()));
+//			BufferedReader reader = new BufferedReader(new InputStreamReader(UserLocationMatch.class.getClass().getResourceAsStream(getTestSourceFile())));
 			String line = reader.readLine();//首行是标题，不是实际数据，没有用，此处直接读掉
 			while((line=reader.readLine())!=null){
 				String location = line.split("\t")[0];
@@ -299,7 +311,6 @@ public class UserLocationMatch {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
 		return g;
 	}
 }
