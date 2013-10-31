@@ -18,24 +18,32 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
 
+import roadNetwork.Edge;
 import match.MatchResult;
 import match.UserLocationMatch;
 
 public class WaitingPrediction {
 	private static final Logger LOG = Logger.getLogger(WaitingPrediction.class);
 	private static final int MAX_WAITING_MIN = 15;
+	private static final int WEEKDAY = 12345;
+	private static final int WEEKENDS = 67;
 	public static final String PROPS_FILENAME = "WaitingPrediction.properties";
 	static Properties sysConfigProps = new Properties();
 	static List<String> dateTimeList = new ArrayList<String>();
 	static List<PredictResult> predictResult = new ArrayList<PredictResult>();
-	static Map<Long, Map<Integer, IndexRecord>> CACHED_INDEX = new HashMap<Long, Map<Integer, IndexRecord>>();
+	static Map<Long, Map<Integer, Map<Integer,StatisticsRecord>>> CACHED_INDEX = new HashMap<Long, Map<Integer, Map<Integer,StatisticsRecord>>>();
+	
+	static Set<Long> allRelatedEdges = new HashSet<Long>();
+	static double allRelatedTraficFlows = 0;
 
 	
 	private static void displayHelpInfo()
@@ -134,13 +142,26 @@ public class WaitingPrediction {
 			List<List<MatchResult>> mrList = UserLocationMatch.match();
 			if (mrList.size() != dateTimeList.size())
 				throw new Exception();
+			
+			for(List<MatchResult> oneUser: mrList){
+				for(MatchResult r:oneUser){
+					allRelatedEdges.add(r.getEdge().getId());
+				}
+			}
+			
+			
 			readIndex();
+			List<TimeSegment> allUserTime = new ArrayList<TimeSegment>();
+			for(int i=0;i<dateTimeList.size();i++){
+				allUserTime.add(parseToTimeSegment(parseDateTime(dateTimeList.get(i))));
+			}
+			countAllTrafic(mrList, allUserTime);
 
 			Long edgeId = 0l;
 			TimeSegment userTime = null;
 			for (int i = 0; i < mrList.size(); i++) {
 				edgeId = mrList.get(i).get(0).getEdge().getId();
-				userTime = parseToTimeSegment(parseDateTime(dateTimeList.get(i)));
+				userTime = allUserTime.get(i);
 				predictResult.add(predict(edgeId, userTime));
 			}
 
@@ -148,6 +169,20 @@ public class WaitingPrediction {
 				System.out.println(r);
 			}
 			System.out.println((Calendar.getInstance().getTimeInMillis()-cal.getTimeInMillis())/1000);
+		}
+	}
+	
+	static void countAllTrafic(List<List<MatchResult>> mrList,List<TimeSegment> allUserTime){
+		int minutesToCount = 3;
+		for(int i=0;i<mrList.size();i++){
+			Long edgeId = mrList.get(i).get(0).getEdge().getId();
+			for(int j=0;j<minutesToCount;j++){
+				if(isWeekDay(allUserTime.get(i).getDateType().getValue())){
+					allRelatedTraficFlows+=searchIndex(edgeId, WEEKDAY, allUserTime.get(i).getIndex()+j).getAvrTraficFlow();
+				}else if(isWeekends(allUserTime.get(i).getDateType().getValue())){
+					allRelatedTraficFlows+=searchIndex(edgeId, WEEKENDS, allUserTime.get(i).getIndex()+j).getAvrTraficFlow();
+				}
+			}
 		}
 	}
 
@@ -191,9 +226,27 @@ public class WaitingPrediction {
 	}
 
 	/**
-	 * 将eidx文件扫一遍，将其中出现了的索引都建在内存中，以后从stat文件中读取过数据就可以直接缓存在内存中读取   缓存到全局map  CACHED_INDEX中
+	 * 将eidx文件扫一遍，将所有与当前测试文件相关的edge的数据索引都建在内存中，从stat文件中读取数据   缓存到全局map  CACHED_INDEX中
+	 * 这个函数处理完以后，CACHED_INDEX中的数据已经是纵向 按工作日和非工作日平滑好了的
 	 */
 	public static void readIndex() {
+		//对所有要读入的edge，先把要建好的内存map结构建好，后面直接读文件累加
+		for(Long eid:allRelatedEdges){
+			Map<Integer,Map<Integer,StatisticsRecord>> datetypeMap = new TreeMap<Integer,Map<Integer,StatisticsRecord>>();
+			Map<Integer,StatisticsRecord> dailyTimeSegMap = new TreeMap<Integer, StatisticsRecord>();
+			for(int i=0;i<1440;i++){
+				dailyTimeSegMap.put(i, new StatisticsRecord(0, 0, 0));				
+			}
+			datetypeMap.put(WEEKDAY, dailyTimeSegMap);
+			dailyTimeSegMap = new TreeMap<Integer, StatisticsRecord>();
+			for(int i=0;i<1440;i++){
+				dailyTimeSegMap.put(i, new StatisticsRecord(0, 0, 0));				
+			}
+			datetypeMap.put(WEEKENDS, dailyTimeSegMap);
+			CACHED_INDEX.put(eid, datetypeMap);
+		}
+		
+		//根据eidx文件的索引，到stat文件中读入数据，累加到CACHED_INDEX中
 		try {
 			BufferedReader reader = new BufferedReader(
 					new FileReader(sysConfigProps.getProperty("eidxFile")));
@@ -201,32 +254,70 @@ public class WaitingPrediction {
 			while ((line = reader.readLine()) != null) {
 				String[] splits = line.split(",");
 				Long edgeId = new Long(Long.parseLong(splits[0]));
-				Integer datetype = new Integer(Integer.parseInt(splits[1]));
-				if (CACHED_INDEX.containsKey(edgeId)) {
-					Map<Integer, IndexRecord> record = CACHED_INDEX.get(edgeId);
-					record.put(
-							datetype,
-							new IndexRecord(splits[2], Integer
-									.parseInt(splits[3]), Integer
-									.parseInt(splits[4]),
-									new ArrayList<StatisticsRecord>()));
-				} else {
-					Map<Integer, IndexRecord> record = new TreeMap<Integer, IndexRecord>();
-					record.put(
-							datetype,
-							new IndexRecord(splits[2], Integer
-									.parseInt(splits[3]), Integer
-									.parseInt(splits[4]),
-									new ArrayList<StatisticsRecord>()));
-					CACHED_INDEX.put(edgeId, record);
+				if(allRelatedEdges.contains(edgeId)){
+					Integer datetype = new Integer(Integer.parseInt(splits[1]));
+					Map<Integer,StatisticsRecord> readResult = readStatFile(sysConfigProps.getProperty("statFilePath")+splits[2], Integer.parseInt(splits[3]), Integer.parseInt(splits[4]));
+					
+					for (Map.Entry<Integer, StatisticsRecord> entry : readResult
+							.entrySet()) {
+						if (isWeekDay(datetype)) {
+							CACHED_INDEX.get(edgeId).get(WEEKDAY).get(entry.getKey()).add(entry.getValue());
+						}else if(isWeekends(datetype)){
+							CACHED_INDEX.get(edgeId).get(WEEKENDS).get(entry.getKey()).add(entry.getValue());
+						}
+					}
 				}
 			}
 			reader.close();
+			
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		//对CACHED_INDEX中的数据 纵向 按工作日/非工作日进行平均     即对工作日的数据进行除以5平均，对周末的数据进行除以2平均
+		for(Long eid:allRelatedEdges){
+			for(Map.Entry<Integer, StatisticsRecord>  weekdayRecord:CACHED_INDEX.get(eid).get(WEEKDAY).entrySet()){
+				weekdayRecord.getValue().avrWeekday();
+			}
+			for(Map.Entry<Integer, StatisticsRecord>  weekendsRecord:CACHED_INDEX.get(eid).get(WEEKENDS).entrySet()){
+				weekendsRecord.getValue().avrWeekends();
+			}
+		}
+		
+	}
+	
+	static boolean isWeekDay(int datetype){
+		return datetype>=DateType.Monday.getValue()&&datetype<=DateType.Friday.getValue();
+	}
+	
+	static boolean isWeekends(int datetype){
+		return datetype==DateType.Saturday.getValue()||datetype==DateType.Sunday.getValue();
+	}
+	
+	static Map<Integer,StatisticsRecord> readStatFile(String filename,int lineFrom,int lineTo){
+		Map<Integer, StatisticsRecord> records = new HashMap<Integer, StatisticsRecord>();
+		
+		try {
+			RandomAccessFile file = new RandomAccessFile(new File(filename), "r");
+			file.seek(lineFrom);
+			String line = "";
+			while ((line = file.readLine()) != null
+					&& file.getFilePointer() < lineTo) {
+				String[] splits = line.split(",");
+				records.put(Integer.parseInt(splits[2]), new StatisticsRecord(Double.parseDouble(splits[3]), Double.parseDouble(splits[4]),Double.parseDouble(splits[5])));
+			}
+			file.close();
+			
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		
+		return records;
 	}
 
 	/**
@@ -234,33 +325,38 @@ public class WaitingPrediction {
 	 * @param edgeId
 	 * @param userTime
 	 */
-	public static void readIndex(long edgeId, TimeSegment userTime) {
-		try {
-			IndexRecord record = CACHED_INDEX.get(edgeId).get(
-					userTime.getDateType().getValue());
-			RandomAccessFile file = new RandomAccessFile(sysConfigProps.getProperty("statFilePath")
-					+ record.getStat_fileName(), "r");
-			file.seek(record.getLine_from());
-			String line = "";
-			while ((line = file.readLine()) != null
-					&& file.getFilePointer() < record.getLine_to()) {
-				String[] splits = line.split(",");
-				record.getStats().add(
-						new StatisticsRecord(Long.parseLong(splits[0]),
-								DateType.values()[Integer.parseInt(splits[1])],
-								Integer.parseInt(splits[2]), Double
-										.parseDouble(splits[3]), Double
-										.parseDouble(splits[4]), Double
-										.parseDouble(splits[5])));
-			}
-			file.close();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+//	public static void readIndex(long edgeId, TimeSegment userTime) {
+//		try {
+//			IndexRecord record = CACHED_INDEX.get(edgeId).get(
+//					userTime.getDateType().getValue());
+//			RandomAccessFile file = new RandomAccessFile(sysConfigProps.getProperty("statFilePath")
+//					+ record.getStat_fileName(), "r");
+//			file.seek(record.getLine_from());
+//			String line = "";
+//			while ((line = file.readLine()) != null
+//					&& file.getFilePointer() < record.getLine_to()) {
+//				String[] splits = line.split(",");
+//				record.getStats().add(
+//						new StatisticsRecord(Integer.parseInt(splits[2]), Double
+//										.parseDouble(splits[3]), Double
+//										.parseDouble(splits[4]), Double
+//										.parseDouble(splits[5])));
+//			}
+//			file.close();
+//		} catch (FileNotFoundException e) {
+//			e.printStackTrace();
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//	}
 
+	public static PredictResult predict(List<MatchResult> mr,TimeSegment userTime){
+		PredictResult result = new PredictResult(0.0, MAX_WAITING_MIN);
+		
+		return result;
+	}
+	
+	
 	/**
 	 * 根据指定好的edgeid和datetype以及时间片index来进行预测用户的3分钟内打到车的概率和预估等待时间
 	 * @param edgeId
@@ -274,50 +370,88 @@ public class WaitingPrediction {
 		// List<Double> meanFlowList = new ArrayList<Double>();
 		// List<Double> meanSpeedList = new ArrayList<Double>();
 		List<Double> emptyRatioList = new ArrayList<Double>();
+		List<Double> traficFlowList = new ArrayList<Double>();
 
 		for (int i = 0; i < MAX_WAITING_MIN; i++) {
-			emptyRatioList.add(0.0);
+			StatisticsRecord record = null;
+			if (isWeekDay(userTime.getDateType().getValue())) {
+				record = searchIndex(edgeId, WEEKDAY, userTime.getIndex() + i);
+			} else if (isWeekends(userTime.getDateType().getValue())) {
+				record = searchIndex(edgeId, WEEKENDS, userTime.getIndex() + i);
+			}
+			emptyRatioList.add(record.getAvrEmptyRatio());
+			traficFlowList.add(record.getAvrTraficFlow());
 		}
 
-		if (CACHED_INDEX.get(edgeId).get(userTime.getDateType().getValue()) != null) {
-
-			if (CACHED_INDEX.get(edgeId).get(userTime.getDateType().getValue())
-					.getStats().size()==0) {
-				readIndex(edgeId, userTime);
-			}
-			List<StatisticsRecord> stats = CACHED_INDEX.get(edgeId)
-					.get(userTime.getDateType().getValue()).getStats();
-			for (StatisticsRecord r : stats) {
-				int time_delta = r.getDailytime_index() - userTime.getIndex();
-				if (time_delta >= 0 && time_delta < MAX_WAITING_MIN) {
-					emptyRatioList.set(time_delta, r.getAvrEmptyRatio());
-				}else if(time_delta >= MAX_WAITING_MIN){
-					break;
-				}
-			}
-			/**
-			 *    v1.0 版本的计算策略     
-			 *    	3分钟内打到车的概率是一个条件概率和，第一分钟打到车，第一分钟没打到第二分钟打到，第一二分钟没有打到，第三分钟打到
-			 *    	预估等待时间对空载率求积分，累计积分超过1的时候，认为必然打到车了   现在实际上认为空载率在一分钟是恒定的，所以求积分的时候直接累加空载率
-			 */
-			result.probability = emptyRatioList.get(0)
-					+ (1 - emptyRatioList.get(0)) * emptyRatioList.get(1)
-					+ (1 - emptyRatioList.get(0)) * (1 - emptyRatioList.get(1))
-					* emptyRatioList.get(2);
-			int waitingMin = 0;
-			Double sum = 0.0;
-			for (; waitingMin < MAX_WAITING_MIN; waitingMin++) {
-				sum += emptyRatioList.get(waitingMin);
-				if (sum >= 1)
-					break;
-			}
-			result.estimatedWaitingTime = waitingMin + 1;
+		/**
+		 * v1.0 版本的计算策略
+		 * 3分钟内打到车的概率是一个条件概率和，第一分钟打到车，第一分钟没打到第二分钟打到，第一二分钟没有打到，第三分钟打到
+		 * 预估等待时间对空载率求积分，累计积分超过1的时候，认为必然打到车了 现在实际上认为空载率在一分钟是恒定的，所以求积分的时候直接累加空载率
+		 */
+//		result.probability = emptyRatioList.get(0)
+//				+ (1 - emptyRatioList.get(0)) * emptyRatioList.get(1)
+//				+ (1 - emptyRatioList.get(0)) * (1 - emptyRatioList.get(1))
+//				* emptyRatioList.get(2);
+		
+		
+		/**
+		 * v2.0 版本的计算策略
+		 * 3分钟内打到车的概率是当前里用户最近的这条路上三分钟总的空车数，除以所有relatedEdge中top1的edge在该用户查询时间点三分钟的总流量
+		 * 预估等待时间对空载率求积分，累计积分超过1的时候，认为必然打到车了 现在实际上认为空载率在一分钟是恒定的，所以求积分的时候直接累加空载率
+		 */
+		double avrEmptyTexiCount = traficFlowList.get(0)*emptyRatioList.get(0)+traficFlowList.get(1)*emptyRatioList.get(1)+traficFlowList.get(2)*emptyRatioList.get(2);
+		result.probability = avrEmptyTexiCount/allRelatedTraficFlows;
+		
+		int waitingMin = 0;
+		Double sum = 0.0;
+		for (; waitingMin < MAX_WAITING_MIN; waitingMin++) {
+			sum += emptyRatioList.get(waitingMin);
+			if (sum >= 1)
+				break;
 		}
+		result.estimatedWaitingTime = waitingMin + 1;
 		if (result.estimatedWaitingTime >= MAX_WAITING_MIN)
 			result.estimatedWaitingTime = MAX_WAITING_MIN;
 		return result;
 	}
 
+	/**
+	 * 读取按当前传入的三个索引查到的StatisticsRecord的值，如果当前StatisticsRecord是空值，则用其前后不为空的StatisticsRecord进行线性平滑
+	 * @param edgeId
+	 * @param weekdayType
+	 * @param dailyIndex
+	 * @return
+	 */
+	public static StatisticsRecord searchIndex(Long edgeId,int weekdayType,int dailyIndex){
+		Map<Integer,StatisticsRecord> dailyRecord = CACHED_INDEX.get(edgeId).get(weekdayType);
+		
+		//如果当前StatisticsRecord是空值，则用其前后不为空的StatisticsRecord进行线性平滑
+		if(dailyRecord.get(dailyIndex).isEmptyRecord()){
+			int lowerBound = dailyIndex;
+			int upperBound = dailyIndex;
+			do{
+				lowerBound--;
+			}while(dailyRecord.get(lowerBound).isEmptyRecord()&&lowerBound>0);
+			do{
+				upperBound++;
+			}while(dailyRecord.get(upperBound).isEmptyRecord()&&lowerBound<1440-1);
+			StatisticsRecord lowerRecord = dailyRecord.get(lowerBound);
+			StatisticsRecord upperRecord = dailyRecord.get(upperBound);
+			if(!lowerRecord.isEmptyRecord()||!upperRecord.isEmptyRecord()){
+				for(int i=lowerBound+1;i<upperBound;i++){
+					int range = i-lowerBound;
+					int delta = upperBound-lowerBound;
+					double traficFlow = lowerRecord.getAvrTraficFlow()+(upperRecord.getAvrTraficFlow()-lowerRecord.getAvrTraficFlow())*range/delta;
+					double emptyRatio = lowerRecord.getAvrEmptyRatio()+(upperRecord.getAvrEmptyRatio()-lowerRecord.getAvrEmptyRatio())*range/delta;
+					double traficSpeed = lowerRecord.getAvrTraficSpeed()+(upperRecord.getAvrTraficSpeed()-lowerRecord.getAvrTraficSpeed())*range/delta;
+					dailyRecord.get(i).add(new StatisticsRecord(traficFlow, emptyRatio, traficSpeed));
+				}
+			}
+		}
+		
+		return dailyRecord.get(dailyIndex);
+	}
+	
 	public static void loadProperties() {
 		try {
 			BufferedReader propsReader = new BufferedReader(
