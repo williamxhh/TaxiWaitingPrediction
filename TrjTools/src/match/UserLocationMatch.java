@@ -75,8 +75,7 @@ public class UserLocationMatch {
 		//以下两行代码是用来修正用户的GPS数据与路网数据的偏移量
 			user.setLng(user.getLng()+Double.parseDouble(sysConfigProps.getProperty("longituteDelta")));
 			user.setLat(user.getLat()+Double.parseDouble(sysConfigProps.getProperty("latituteDelta")));
-			System.out.println(user.getLng());
-			System.out.println(user.getLat());
+//			System.out.println(user.getLng()+","+user.getLat());
 		}
 		HashSet<MatchResult> candidateEdges = getCandidateEdges(user,RADIUS);
 		List<MatchResult> result = new ArrayList<MatchResult>(candidateEdges);
