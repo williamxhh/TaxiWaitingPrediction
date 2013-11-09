@@ -43,6 +43,7 @@ public class MatchResult implements Comparable<MatchResult>{
 	@Override
 	public String toString() {
 		return this.edge.getId()+","+this.segId+"#";
+//		return "("+this.edge.getStart().getLat()+","+this.edge.getStart().getLng()+")--->("+this.edge.getEnd().getLat()+","+this.edge.getEnd().getLng()+")###";
 	}
 	
 	
